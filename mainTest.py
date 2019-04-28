@@ -29,10 +29,12 @@ def checkReverse(data):
 	s = SequenceMatcher(lambda x: x==" ",testAddr,mainAddr)
 	if (float(s.ratio())>0.7):
 		logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
+		logging.warning("Процент совпадения адреса: "+str(s.ratio()))
 		logging.warning("\tТест пройден")
 	else:
 		logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
-		logging.warning("\tТест не пройден")
+		logging.warning("Процент совпадения адреса: "+str(s.ratio()))
+		logging.warning("\tТест не пройден")		
 
 def openFile(check,filepath):
 	try:	
