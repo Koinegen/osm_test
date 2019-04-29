@@ -84,11 +84,18 @@ def openFile(check,filepath):
 				logging.warning("!!!Не обработанные данные!!!")
 		f.close()
 		logging.warning("-------------------------------------------------------\nВсего обработано данных:"+str(summary.All)+"\nПрошли проверку:"+str(summary.good)+"\nНе прошли проверку:"+str(summary.bad)+"\n-------------------------------------------------------")
-		logging.warning("Входные данные не прошедшие проверку:\n"+str(summary.listOfBad))
-		logging.warning("\tКонец лога")
+		
 	except:
 		logging.warning("Не верный формат данных или файл испорчен")
 		print("Не верный формат файла или файл испорчен")
+	try:
+		f=open("bad_data.json","w")
+		json.dump(summary.listOfBad,f,ensure_ascii=False)
+		f.close()
+		logging.warning("Входные данные не прошедшие проверку записаны в файл: bad_data.json")
+		logging.warning("\tКонец лога")
+	except:
+		print("Файл с данными, не прошедшими проверку не записан!")
 parser=argparse.ArgumentParser("give file for forward or reverse codings")
 parser.add_argument('-f',type=str,help='-forward coding')
 parser.add_argument('-r',type=str,help='-reverse coding')
