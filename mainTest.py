@@ -4,10 +4,16 @@ import os.path
 import argparse
 import json
 from difflib import SequenceMatcher
+import re
 
-
-
-def checkForward(data):
+class result():
+	def __init__(self):
+		self.good=0
+		self.bad=0
+		self.All=0
+		self.listOfBad=[]
+		
+def checkForward(data,result):
 	a=[]
 	g=geocoder.osm(data.get("name"))
 	a.append(g.osm.get('y'))
@@ -15,11 +21,17 @@ def checkForward(data):
 	if (abs(a[0]-float(data.get('y'))<=0.0020) and abs(a[1]-float(data.get('x'))<=0.0020)):
 		logging.warning("Для\""+data.get("name")+"\" и y="+str(a[0])+" x="+str(a[1])+" координаты: " + str(data.get('y'))+" " + str(data.get('x'))+" верны.")
 		logging.warning("\tТест пройден")
+		result.good+=1
+		result.All+=1
 	else:
 		logging.warning("Для \""+data.get("name")+"\" и y="+str(a[0])+" x="+str(a[1])+" координаты: "+str(data.get('y'))+" "+str(data.get('x'))+" не верны.")
 		logging.warning("\tТест не пройден")
+		result.bad+=1
+		result.All+=1
+		result.listOfBad.append(data)
+		
 
-def checkReverse(data):
+def checkReverse(data,result):
 	a=[]
 	a.append(data.get('y'))
 	a.append(data.get('x'))
@@ -28,24 +40,51 @@ def checkReverse(data):
 	mainAddr=data.get('name')
 	s = SequenceMatcher(lambda x: x==" ",testAddr,mainAddr)
 	if (float(s.ratio())>0.7):
-		logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
-		logging.warning("Процент совпадения адреса: "+str(s.ratio()))
-		logging.warning("\tТест пройден")
+		if ('addr:housenumber' in g.osm.keys()):
+			readdr=g.osm.get('addr:housenumber')
+			mainAdr=data.get('name')
+			b=re.search(str(readdr),str(mainAdr),re.X|re.I)
+			if (b != None):
+				logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
+				logging.warning("Процент совпадения адреса: "+str(s.ratio()))
+				logging.warning("\tТест пройден")
+				result.good+=1
+				result.All+=1
+			else:
+				logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr+" и "+testAddr)
+				logging.warning("Процент совпадения адреса: "+str(s.ratio())+", однако номера домов не совпали.")
+				logging.warning("\tТест не пройден")
+				result.bad+=1
+				result.All+=1
+				result.listOfBad.append(data)
+				
+		else:	
+			logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
+			logging.warning("Процент совпадения адреса: "+str(s.ratio()))
+			logging.warning("\tТест пройден")
+			result.good+=1
+			result.All+=1
 	else:
-		logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr)
+		logging.warning("Для\"y="+str(a[0])+" x="+str(a[1])+" Адрес:"+mainAddr+" и "+testAddr)
 		logging.warning("Процент совпадения адреса: "+str(s.ratio()))
-		logging.warning("\tТест не пройден")		
+		logging.warning("\tТест не пройден")
+		result.bad+=1
+		result.All+=1
+		result.listOfBad.append(data)
 
 def openFile(check,filepath):
-	try:	
+	try:
+		summary=result()
 		f=open(filepath,'r')
 		data = json.load(f)
 		for i in data:
 			try:
-				check(i)
+				check(i,summary)
 			except:
 				logging.warning("!!!Не обработанные данные!!!")
 		f.close()
+		logging.warning("-------------------------------------------------------\nВсего обработано данных:"+str(summary.All)+"\nПрошли проверку:"+str(summary.good)+"\nНе прошли проверку:"+str(summary.bad)+"\n-------------------------------------------------------")
+		logging.warning("Входные данные не прошедшие проверку:\n"+str(summary.listOfBad))
 		logging.warning("\tКонец лога")
 	except:
 		logging.warning("Не верный формат данных или файл испорчен")
